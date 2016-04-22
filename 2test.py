@@ -20,7 +20,7 @@ stepv=15
 i=0
 
 
-# Считываем url-list и шаблон конфига
+# Считываем url-list
 file = open('/home/dieul/Документы/Selectel/url-abuse_test.txt', 'r')
 Urls=file.read()
 file.close()
@@ -117,8 +117,6 @@ name = channel.set_name('netconf')
 #Invoke NETCON
 channel.invoke_subsystem('netconf')
 
-print("Last element",Urls[103:105])
-
 #заполняем <value>
 for i in range(1,count+1):
     position=Urls.rfind(' ')
@@ -154,22 +152,6 @@ for i in range(1,count+1):
 #        print(mset(Hostname, valuem))
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
-
-#отправляем хвост
-#channel.send(mset(Hostname, value))
-#channel.send(mset(Hostname, valuem))
-#print(Urls)
-#position=Urls.rfind(' ')
-#value=Urls[position+1:len(Urls)+1]
-#print("value after if", value)
-#valuem=valuem+value+"</value><value>"
-#
-#print("Tail send  %d request successes!!!  count is %d " %(i, count))
-
-#channel.send(mset(Hostname, value))
-#print("Value is",value)
-
-
 
 #channel.send(INFO)
 #channel.send(CONF)
