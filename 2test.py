@@ -120,38 +120,44 @@ channel.invoke_subsystem('netconf')
 print("Last element",Urls[103:105])
 
 #заполняем <value>
-for i in range(1,count+4):
+for i in range(1,count+1):
     position=Urls.rfind(' ')
     print(i,position,count)
-    if i%stepv !=0:
-        if (i)%step !=0:
-            value=value+" "+Urls[position+1:len(Urls)+1]
-#            print("Value is",value)
-            Urls=Urls[0:position]
-#            print("Length",len(Urls))
-        else:
-#            создаем новую строчку  <value>
-            valuem=valuem+value+"</value><value>"
-            print("Value in IF behin is %d %s" %(i, value))
-            value=Urls[position+1:len(Urls)+1]
-            print("Value in IF end is",value)
-            print("Valuem in IF end is",valuem)
-            if i != count:
-                Urls=Urls[0:position]
-#               print(Urls)
-#            else:
-
+    if (i)%step !=0:
+        value=value+" "+Urls[position+1:len(Urls)+1]
+        Urls=Urls[0:position]
     else:
+#        создаем новую строчку  <value>
+        valuem=valuem+value+"</value><value>"
+#        print("Value in IF behin is %d %s" %(i, value))
+        value=Urls[position+1:len(Urls)+1]
+#        print("Value in IF end is",value)
+#        print("Valuem in IF end is",valuem)
+        Urls=Urls[0:position]
+#отправка
+    if i%stepv ==0:
         channel.send(mset(Hostname, valuem))
         sleep(0.1)
 #        print(mset(Hostname, valuem))
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
+#        print("Value in IF behin is %d %s" %(i, value))
+    elif i == count:
+        channel.send(mset(Hostname, valuem))
+        channel.send(mset(Hostname, value))
         print("Value in IF behin is %d %s" %(i, value))
+        print("Valuem in IF behin is %d %s" %(i, valuem))
+        value=Urls[0:position-1]
+        channel.send(mset(Hostname, value))
+        print("First Value is :",value)
+        sleep(0.1)
+#        print(mset(Hostname, valuem))
+        print("send  %d request successes!!!  count is %d " %(i, count))
+        valuem = ""
 
 #отправляем хвост
-channel.send(mset(Hostname, value))
-channel.send(mset(Hostname, valuem))
+#channel.send(mset(Hostname, value))
+#channel.send(mset(Hostname, valuem))
 #print(Urls)
 #position=Urls.rfind(' ')
 #value=Urls[position+1:len(Urls)+1]
@@ -162,10 +168,6 @@ channel.send(mset(Hostname, valuem))
 
 #channel.send(mset(Hostname, value))
 #print("Value is",value)
-#value=Urls[0:position-1]
-#channel.send(mset(Hostname, value))
-#print("First Value is :",value)
-
 
 
 
