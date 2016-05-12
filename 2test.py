@@ -91,6 +91,8 @@ def createParser():
     parser.add_argument("-u", default="admin", action="store" , help = "username")
     parser.add_argument("-p", default="QaZxSw!23", action="store",help = "password")
     parser.add_argument("-P", default=830, action="store",help = "port")
+    parser.add_argument("-d", action="store_true", help = "debug")
+    parser.add_argument("-v", action="store_true", help = "verbose")
     return parser
 
 parser = createParser()
@@ -99,23 +101,21 @@ namespace = parser.parse_args(sys.argv[1:])
 print (namespace)
 
 
-
-#create socket
-socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-socket.connect((namespace.host , namespace.P))
-
-# шифруем через ssh
-client = paramiko.SSHClient()
-# добавляем ключ сервера в список известных хостов — файл .ssh/known_hosts.
-client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client = paramiko.Transport(socket)
-client.connect( username=namespace.u, password=namespace.p)
-
-#Create channel
-channel = client.open_session()
-name = channel.set_name('netconf')
-#Invoke NETCON
-channel.invoke_subsystem('netconf')
+if namespace.d == False:
+    #create socket
+    socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    socket.connect((namespace.host , namespace.P))
+    # шифруем через ssh
+    client = paramiko.SSHClient()
+    # добавляем ключ сервера в список известных хостов — файл .ssh/known_hosts.
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client = paramiko.Transport(socket)
+    client.connect( username=namespace.u, password=namespace.p)
+    #Create channel
+    channel = client.open_session()
+    name = channel.set_name('netconf')
+    #Invoke NETCON
+    channel.invoke_subsystem('netconf')
 
 #заполняем <value>
 for i in range(1,count+1):
@@ -134,40 +134,57 @@ for i in range(1,count+1):
         Urls=Urls[0:position]
 #отправка
     if i%stepv ==0:
-        channel.send(mset(Hostname, valuem))
+        if namespace.d == False:
+            channel.send(mset(Hostname, valuem))
+            if namespace.v == True:
+                print(mset(Hostname, valuem))
+        else:
+            print(mset(Hostname, valuem))
         sleep(0.1)
-#        print(mset(Hostname, valuem))
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
-#        print("Value in IF behin is %d %s" %(i, value))
     elif i == count:
-        channel.send(mset(Hostname, valuem))
-        channel.send(mset(Hostname, value))
+        if namespace.d == False:
+            channel.send(mset(Hostname, valuem))
+            channel.send(mset(Hostname, value))
+            if namespace.v == True:
+                print(mset(Hostname, valuem))
+                print(mset(Hostname, value))
+        else:
+            print(mset(Hostname, valuem))
+            print(mset(Hostname, value))
         print("Value in IF behin is %d %s" %(i, value))
         print("Valuem in IF behin is %d %s" %(i, valuem))
         value=Urls[0:position-1]
-        channel.send(mset(Hostname, value))
-        print("First Value is :",value)
+        if namespace.d == False:
+            channel.send(mset(Hostname, value))
+            if namespace.v == True:
+                print(mset(Hostname, value))
+        else:
+            print(mset(Hostname, value))
         sleep(0.1)
-#        print(mset(Hostname, valuem))
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
 
 #channel.send(INFO)
 #channel.send(CONF)
 #channel.send(SET)
-channel.send(COMMIT)
-Flag=1
+if namespace.d == False:
+    channel.send(COMMIT)
+    if namespace.v == True:
+        print(COMMIT)
+    Flag=1
+    #Recieve data returned
+    data = channel.recv(2048)
+    while data:
+       data = channel.recv(1024)
+       print(data)
+       if (data.find('</rpc-reply>') == 0) and (Flag == 1):
+         #We have reached the end of reply
+         channel.send(CLOSE)
 
-#Recieve data returned
-data = channel.recv(2048)
-while data:
-   data = channel.recv(1024)
-   print(data)
-   if (data.find('</rpc-reply>') == 0) and (Flag == 1):
-     #We have reached the end of reply
-     channel.send(CLOSE)
-
-channel.close()
-client.close()
-socket.close()
+    channel.close()
+    client.close()
+    socket.close()
+else:
+    print(COMMIT)
