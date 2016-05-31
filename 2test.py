@@ -32,7 +32,7 @@ count=Urls.count(' ')
 print("Count space is ",count)
 print("Length is", len(Urls))
 # задаем управляющие команды
-
+#hello for cisco
 HELLOC="""
 <?xml version="1.0"?>
 <nc:hello xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
@@ -41,7 +41,7 @@ HELLOC="""
     </nc:capabilities>
 </nc:hello>]]>]]>
 """
-
+#hello for jun
 HELLOJ = '<hello><capabilities><capability>urn:ietf:params:xml:ns:netconf:base:1.0</capability><capability>' \
         'urn:ietf:params:xml:ns:netconf:capability:candidate:1.0</capability><capability>urn:ietf:params:xml:ns:' \
         'netconf:capability:confirmed-commit:1.0</capability><capability>urn:ietf:params:xml:ns:netconf:capability:' \
@@ -119,7 +119,7 @@ COMMIT="""
 
 def createParser():
     parser = argparse.ArgumentParser(description = '--> Connect to vSRX or 2851 <--')
-    parser.add_argument("--host", default="10.230.128.164", action="store", help="hostname or IP ")
+    parser.add_argument("--host", default="10.230.242.11", action="store", help="hostname or IP ")
     parser.add_argument("-u", default="admin", action="store" , help = "username")
     parser.add_argument("-p", default="QaZxSw!23", action="store",help = "password")
     parser.add_argument("-P", default=830, action="store",help = "port")
@@ -167,7 +167,11 @@ if namespace.d == False:
             if namespace.v == True:
                 print(data_hello)
                 print("End of Hello message is found")
-                break
+                print("gnerate hello message...and send it")
+                if vendor == "juniper":
+                    print(HELLOJ)
+                elif vendor == "cisco":
+                    print(HELLOC)
             break
     #выдергиваем тэг <session-id>
 #    dom=parseString(data_hello)
@@ -177,19 +181,7 @@ if namespace.d == False:
     # session-id: print node.childNodes[0].nodeValue
 #    session_id=dom.getElementsByTagName('session-id')[0].childNodes[0].nodeValue
 
-    #создаем сообщение hello
-    if namespace.v == True:
-        print("gnerate hello message...")
-#        print(helloj)
-#    channel.send(HELLOC)
-    data="1"
-    if vendor == "juniper":
-#        channel.send(INFO)
-        print("JUN")
-    elif vendor == "cisco":
-#        channel.send(CONFC)
-        print("CIS")
-#        ENABLE="""
+#       ENABLE="""
 #        <rpc><notification-on/>
 #        </rpc>
 #        """
