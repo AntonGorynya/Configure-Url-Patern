@@ -5,6 +5,7 @@ import sys
 import argparse
 import paramiko
 import socket
+from xml.dom.minidom import  parse,parseString
 from time import sleep
 
 Hostname = "Host"
@@ -18,7 +19,7 @@ step=1
 #Количество <value> xxx </value> / step
 stepv=15
 i=0
-
+vendor=""
 
 # Считываем url-list
 file = open('/home/dieul/Документы/Selectel/url-abuse_test.txt', 'r')
@@ -32,6 +33,23 @@ print("Count space is ",count)
 print("Length is", len(Urls))
 # задаем управляющие команды
 
+HELLOC="""
+<?xml version="1.0"?>
+<nc:hello xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <nc:capabilities>
+       <nc:capability>urn:ietf:params:xml:ns:netconf:base:1.0</nc:capability>
+    </nc:capabilities>
+</nc:hello>]]>]]>
+"""
+
+HELLOJ = '<hello><capabilities><capability>urn:ietf:params:xml:ns:netconf:base:1.0</capability><capability>' \
+        'urn:ietf:params:xml:ns:netconf:capability:candidate:1.0</capability><capability>urn:ietf:params:xml:ns:' \
+        'netconf:capability:confirmed-commit:1.0</capability><capability>urn:ietf:params:xml:ns:netconf:capability:' \
+        'validate:1.0</capability><capability>urn:ietf:params:xml:ns:netconf:capability:url:1.0?protocol=http,ftp,file' \
+        '</capability><capability>http://xml.juniper.net/netconf/junos/1.0</capability><capability>http://xml.juniper.' \
+        'net/dmi/system/1.0</capability></capabilities></hello>' \
+        ']]>]]>'
+#как для cisco так и для jun
 CLOSE = """
 <rpc>
  	<close-session/>
@@ -49,6 +67,20 @@ CONF="""
         </get-configuration>
 </rpc>
 ]]>]]>"""
+CONFC="""
+<?xml version="1.0" encoding=\"UTF-8\"?>
+<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <get><filter><config-format-text-cmd>
+     <text-filter-spec> | include interface </text-filter-spec>
+     </config-format-text-cmd>
+  <oper-data-format-text-block>
+   <exec>show interfaces</exec>
+         <exec>show arp</exec>
+         </oper-data-format-text-block>
+       </filter>
+      </get>
+      </rpc>]]>]]>
+"""
 def mset(Hostname, Urls):
     SET="""
     <rpc>
@@ -86,8 +118,8 @@ COMMIT="""
 """
 
 def createParser():
-    parser = argparse.ArgumentParser(description = '--> Connect to vSRX <--')
-    parser.add_argument("--host", default="10.230.242.11", action="store", help="hostname or IP ")
+    parser = argparse.ArgumentParser(description = '--> Connect to vSRX or 2851 <--')
+    parser.add_argument("--host", default="10.230.128.164", action="store", help="hostname or IP ")
     parser.add_argument("-u", default="admin", action="store" , help = "username")
     parser.add_argument("-p", default="QaZxSw!23", action="store",help = "password")
     parser.add_argument("-P", default=830, action="store",help = "port")
@@ -104,7 +136,7 @@ print (namespace)
 if namespace.d == False:
     #create socket
     socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    socket.connect((namespace.host , namespace.P))
+    socket.connect((namespace.host , int(namespace.P)))
     # шифруем через ssh
     client = paramiko.SSHClient()
     # добавляем ключ сервера в список известных хостов — файл .ssh/known_hosts.
@@ -116,6 +148,65 @@ if namespace.d == False:
     name = channel.set_name('netconf')
     #Invoke NETCON
     channel.invoke_subsystem('netconf')
+    #Прием начальной информации.
+    data =1
+    data_hello=""
+    while data:
+        data = channel.recv(4096)
+        data_hello=data_hello+data
+        #ищем конец Hello сообщения и определяем вендора
+        if data_hello.find('</hello>') != -1:
+            if (data_hello.find("cisco") != -1) or (vendor == "cisco"):
+                vendor="cisco"
+                channel.send(HELLOC)
+            elif (data_hello.find("juniper") != -1) or (vendor == "juniper"):
+                vendor="juniper"
+                channel.send(HELLOJ)
+            else:
+                print("not supported")
+            if namespace.v == True:
+                print(data_hello)
+                print("End of Hello message is found")
+                break
+            break
+    #выдергиваем тэг <session-id>
+#    dom=parseString(data_hello)
+    #выдерает вместе с тэгом
+#    session_id=dom.getElementsByTagName('session-id')[0].toxml()
+    # выдерает только значение, можно было бы сделать цикл for node in
+    # session-id: print node.childNodes[0].nodeValue
+#    session_id=dom.getElementsByTagName('session-id')[0].childNodes[0].nodeValue
+
+    #создаем сообщение hello
+    if namespace.v == True:
+        print("gnerate hello message...")
+#        print(helloj)
+#    channel.send(HELLOC)
+    data="1"
+    if vendor == "juniper":
+#        channel.send(INFO)
+        print("JUN")
+    elif vendor == "cisco":
+#        channel.send(CONFC)
+        print("CIS")
+#        ENABLE="""
+#        <rpc><notification-on/>
+#        </rpc>
+#        """
+#        channel.send(ENABLE)
+#    while 1:
+#        print("in while")
+#        data = channel.recv(4096)
+#        print(data)
+#        if data.find('</rpc-reply>') != -1:
+#            decision=raw_input("are u vendnor %s? is it right? Ready to go?" %vendor)
+#            channel.send(CLOSE)
+#            break
+
+decision=raw_input("!!!!are u vendnor %s? is it right? Ready to go?" %vendor)
+
+
+
 
 #заполняем <value>
 for i in range(1,count+1):
@@ -169,6 +260,7 @@ for i in range(1,count+1):
 #channel.send(INFO)
 #channel.send(CONF)
 #channel.send(SET)
+
 if namespace.d == False:
     channel.send(COMMIT)
     if namespace.v == True:
@@ -179,7 +271,7 @@ if namespace.d == False:
     while data:
        data = channel.recv(1024)
        print(data)
-       if (data.find('</rpc-reply>') == 0) and (Flag == 1):
+       if (data.find('</rpc-reply>') != -1) and (Flag == 1):
          #We have reached the end of reply
          channel.send(CLOSE)
 
