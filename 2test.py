@@ -34,12 +34,14 @@ print("Length is", len(Urls))
 # задаем управляющие команды
 #hello for cisco
 HELLOC="""
-<?xml version="1.0"?>
-<nc:hello xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <nc:capabilities>
-       <nc:capability>urn:ietf:params:xml:ns:netconf:base:1.0</nc:capability>
-    </nc:capabilities>
-</nc:hello>]]>]]>
+<?xml version="1.0" encoding="UTF-8"?>
+<hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <capabilities>
+        <capability>urn:ietf:params:netconf:base:1.0</capability><capability>urn:ietf:params:netconf:capability:writeable-running:1.0</capability>
+        <capability>urn:ietf:params:netconf:capability:startup:1.0</capability><capability>urn:ietf:params:netconf:capability:url:1.0</capability>
+        <capability>urn:cisco:params:netconf:capability:pi-data-model:1.0</capability><capability>urn:cisco:params:netconf:capability:notification:1.0</capability>
+    </capabilities>
+</hello>]]>]]>
 """
 #hello for jun
 HELLOJ = '<hello><capabilities><capability>urn:ietf:params:xml:ns:netconf:base:1.0</capability><capability>' \
@@ -55,7 +57,7 @@ CLOSE = """
  	<close-session/>
 </rpc>
 ]]>]]>"""
-
+#JUN
 INFO="""
 <rpc>
 	<get-software-information/>
@@ -67,21 +69,55 @@ CONF="""
         </get-configuration>
 </rpc>
 ]]>]]>"""
+#CISCO
 CONFC="""
 <?xml version="1.0" encoding=\"UTF-8\"?>
 <rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <get><filter><config-format-text-cmd>
-     <text-filter-spec> | include interface </text-filter-spec>
-     </config-format-text-cmd>
-  <oper-data-format-text-block>
-   <exec>show interfaces</exec>
-         <exec>show arp</exec>
-         </oper-data-format-text-block>
-       </filter>
-      </get>
-      </rpc>]]>]]>
+    <get>
+        <filter>
+            <config-format-text-cmd>
+                <text-filter-spec> | include interface </text-filter-spec>
+            </config-format-text-cmd>
+            <oper-data-format-text-block>
+                <exec>show interfaces</exec>
+                <exec>show arp</exec>
+            </oper-data-format-text-block>
+        </filter>
+    </get>
+</rpc>]]>]]>
 """
-def mset(Hostname, Urls):
+CONFC2="""
+ <?xml version="1.0" encoding="UTF-8"?>
+<rpc>
+    <get-config>
+        <source>
+            <startup/>
+        </source>
+        <filter>
+            <config-format-xml>
+            </config-format-xml>
+        </filter>
+    </get-config>
+</rpc>]]>]]>
+"""
+def msetc(Hostname,pattern):
+    SETC="""
+    <?xml version="1.0" encoding="UTF-8"?>
+    <rpc message-id="netconf.mini.edit.3">
+        <edit-config>
+            <target>
+                <startup/>
+          </target>
+        <config>
+        <cli-config-data-block>
+        hostname """+Hostname+"""
+        parameter-map type regex BadSitesRegex \n"""+pattern+""" </cli-config-data-block>
+        </config>
+        </edit-config>
+    </rpc>]]>]]>  """
+    return SETC
+
+def msetj(Hostname, Urls):
     SET="""
     <rpc>
     	<edit-config>
@@ -119,7 +155,7 @@ COMMIT="""
 
 def createParser():
     parser = argparse.ArgumentParser(description = '--> Connect to vSRX or 2851 <--')
-    parser.add_argument("--host", default="10.230.242.11", action="store", help="hostname or IP ")
+    parser.add_argument("--host", default="10.230.128.166", action="store", help="hostname or IP ")
     parser.add_argument("-u", default="admin", action="store" , help = "username")
     parser.add_argument("-p", default="QaZxSw!23", action="store",help = "password")
     parser.add_argument("-P", default=830, action="store",help = "port")
@@ -151,16 +187,29 @@ if namespace.d == False:
     #Прием начальной информации.
     data =1
     data_hello=""
+    #для теста
+    i = 0
     while data:
+        #для дебага
+        print("номер итерации %i \n Значение пременной data_hello " %i)
+        i=i+1
         data = channel.recv(4096)
         data_hello=data_hello+data
+        #для дебага
+        print(data_hello)
         #ищем конец Hello сообщения и определяем вендора
         if data_hello.find('</hello>') != -1:
-            if (data_hello.find("cisco") != -1) or (vendor == "cisco"):
+            if (data_hello.find("cisco") != -1):
                 vendor="cisco"
+                mset=msetc
                 channel.send(HELLOC)
-            elif (data_hello.find("juniper") != -1) or (vendor == "juniper"):
+                #сделаем запрос на кофиг
+                #channel.send(CONFC)
+                #стереть потом
+                data_hello=""
+            elif (data_hello.find("juniper") != -1):
                 vendor="juniper"
+                mset=msetj
                 channel.send(HELLOJ)
             else:
                 print("not supported")
@@ -173,7 +222,10 @@ if namespace.d == False:
                 elif vendor == "cisco":
                     print(HELLOC)
             break
-    #выдергиваем тэг <session-id>
+else:
+    mset=msetc
+    vendor="cisco"
+#выдергиваем тэг <session-id>
 #    dom=parseString(data_hello)
     #выдерает вместе с тэгом
 #    session_id=dom.getElementsByTagName('session-id')[0].toxml()
@@ -208,8 +260,12 @@ for i in range(1,count+1):
         value=value+" "+Urls[position+1:len(Urls)+1]
         Urls=Urls[0:position]
     else:
+        if vendor == "juniper":
 #        создаем новую строчку  <value>
-        valuem=valuem+value+"</value><value>"
+            valuem=valuem+value+"</value><value>"
+        else:
+            value="pattern "+value+" \n"
+            valuem=valuem+value
 #        print("Value in IF behin is %d %s" %(i, value))
         value=Urls[position+1:len(Urls)+1]
 #        print("Value in IF end is",value)
@@ -227,6 +283,8 @@ for i in range(1,count+1):
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
     elif i == count:
+        if vendor=="cisco":
+            value="pattern "+value
         if namespace.d == False:
             channel.send(mset(Hostname, valuem))
             channel.send(mset(Hostname, value))
@@ -238,7 +296,10 @@ for i in range(1,count+1):
             print(mset(Hostname, value))
         print("Value in IF behin is %d %s" %(i, value))
         print("Valuem in IF behin is %d %s" %(i, valuem))
-        value=Urls[0:position-1]
+        if vendor == "juniper":
+            value=Urls[0:position-1]
+        else:
+            value="patern "+Urls[0:position-1]
         if namespace.d == False:
             channel.send(mset(Hostname, value))
             if namespace.v == True:
