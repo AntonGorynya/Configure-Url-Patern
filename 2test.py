@@ -41,16 +41,22 @@ HELLOC="""
         <capability>urn:ietf:params:netconf:capability:startup:1.0</capability><capability>urn:ietf:params:netconf:capability:url:1.0</capability>
         <capability>urn:cisco:params:netconf:capability:pi-data-model:1.0</capability><capability>urn:cisco:params:netconf:capability:notification:1.0</capability>
     </capabilities>
-</hello>]]>]]>
+</hello>
+]]>]]>
 """
 #hello for jun
-HELLOJ = '<hello><capabilities><capability>urn:ietf:params:xml:ns:netconf:base:1.0</capability><capability>' \
-        'urn:ietf:params:xml:ns:netconf:capability:candidate:1.0</capability><capability>urn:ietf:params:xml:ns:' \
-        'netconf:capability:confirmed-commit:1.0</capability><capability>urn:ietf:params:xml:ns:netconf:capability:' \
-        'validate:1.0</capability><capability>urn:ietf:params:xml:ns:netconf:capability:url:1.0?protocol=http,ftp,file' \
-        '</capability><capability>http://xml.juniper.net/netconf/junos/1.0</capability><capability>http://xml.juniper.' \
-        'net/dmi/system/1.0</capability></capabilities></hello>' \
-        ']]>]]>'
+HELLOJ =""" <hello>
+            <capabilities>
+                <capability>urn:ietf:params:xml:ns:netconf:base:1.0</capability>
+                <capability>urn:ietf:params:xml:ns:netconf:capability:candidate:1.0</capability>
+                <capability>urn:ietf:params:xml:ns:netconf:capability:confirmed-commit:1.0</capability>
+                <capability>urn:ietf:params:xml:ns:netconf:capability:validate:1.0</capability>
+                <capability>urn:ietf:params:xml:ns:netconf:capability:url:1.0?protocol=http,ftp,file</capability>
+                <capability>http://xml.juniper.net/netconf/junos/1.0</capability>
+                <capability>http://xml.juniper.net/dmi/system/1.0</capability>
+            </capabilities>
+        </hello>
+        ]]>]]>"""
 #как для cisco так и для jun
 CLOSE = """
 <rpc>
@@ -70,22 +76,6 @@ CONF="""
 </rpc>
 ]]>]]>"""
 #CISCO
-CONFC="""
-<?xml version="1.0" encoding=\"UTF-8\"?>
-<rpc message-id="101" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <get>
-        <filter>
-            <config-format-text-cmd>
-                <text-filter-spec> | include interface </text-filter-spec>
-            </config-format-text-cmd>
-            <oper-data-format-text-block>
-                <exec>show interfaces</exec>
-                <exec>show arp</exec>
-            </oper-data-format-text-block>
-        </filter>
-    </get>
-</rpc>]]>]]>
-"""
 CONFC2="""
  <?xml version="1.0" encoding="UTF-8"?>
 <rpc>
@@ -155,7 +145,7 @@ COMMIT="""
 
 def createParser():
     parser = argparse.ArgumentParser(description = '--> Connect to vSRX or 2851 <--')
-    parser.add_argument("--host", default="10.230.128.166", action="store", help="hostname or IP ")
+    parser.add_argument("--host", default="10.230.242.11", action="store", help="hostname or IP ")
     parser.add_argument("-u", default="admin", action="store" , help = "username")
     parser.add_argument("-p", default="QaZxSw!23", action="store",help = "password")
     parser.add_argument("-P", default=830, action="store",help = "port")
@@ -243,14 +233,10 @@ else:
 #        data = channel.recv(4096)
 #        print(data)
 #        if data.find('</rpc-reply>') != -1:
-#            decision=raw_input("are u vendnor %s? is it right? Ready to go?" %vendor)
 #            channel.send(CLOSE)
 #            break
 
-decision=raw_input("!!!!are u vendnor %s? is it right? Ready to go?" %vendor)
-
-
-
+decision=raw_input("are u vendnor %s? is it right? Ready to go?" %vendor)
 
 #заполняем <value>
 for i in range(1,count+1):
@@ -310,7 +296,7 @@ for i in range(1,count+1):
         print("send  %d request successes!!!  count is %d " %(i, count))
         valuem = ""
 
-#channel.send(INFO)
+channel.send(INFO)
 #channel.send(CONF)
 #channel.send(SET)
 
